@@ -23,8 +23,10 @@ public class AA2_Cloth
     [System.Serializable]
     public struct ClothSettings
     {
-        public float elasticCoef;
-        public float damptCoef;
+        public float structuralElasticCoef;
+        public float structuraDamptCoef;
+
+        public float structuralSpringLength;
     }
     public ClothSettings clothSettings;
 
@@ -39,21 +41,40 @@ public class AA2_Cloth
         public Vector3C lastPosition;
         public Vector3C actualPosition;
         public Vector3C velocity;
+
+        public Vector3C restLenght;
         public Vertex(Vector3C _position)
         {
             this.actualPosition = _position;
             this.lastPosition = _position;
             this.velocity = new Vector3C(0, 0, 0);
+            this.restLenght = Vector3C.zero;
+        }
+
+        public void Euler(Vector3C force, float dt)
+        {
+            lastPosition = actualPosition;
+            velocity += force * dt;
+            actualPosition += velocity * dt;
         }
     }
     public Vertex[] points;
+
+    public bool start;
     public void Update(float dt)
     {
-        System.Random rnd = new System.Random();
-        for (int i = 0; i < points.Length; i++)
+        int totalVertexs = settings.xPartSize + 1;
+
+        for (int i = settings.yPartSize + 1; i < points.Length; i++)
         {
-            points[i].actualPosition = points[i].lastPosition;
-            points[i].actualPosition.y = rnd.Next(100) * 0.01f;
+            float magnitudeY = (points[i - totalVertexs].actualPosition - points[i].actualPosition).magnitude - clothSettings.structuralSpringLength;
+
+            Vector3C forceVector = (points[i - totalVertexs].actualPosition - points[i].actualPosition).normalized * magnitudeY;
+
+            Vector3C damptingForce = (points[i].velocity - points[i - totalVertexs].velocity) * clothSettings.structuraDamptCoef;
+
+            Vector3C structuralSpringForce = (forceVector * clothSettings.structuralElasticCoef) - damptingForce;
+            points[i].Euler(settings.gravity + structuralSpringForce, dt);
         }
     }
 
