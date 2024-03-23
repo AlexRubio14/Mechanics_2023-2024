@@ -1,4 +1,3 @@
-using System;
 
 [System.Serializable]
 public struct LineC
@@ -16,33 +15,40 @@ public struct LineC
     {
         this.origin = origin;
         this.direction = direction;
-        this.direction.Normalize();
     }
     #endregion
 
     #region OPERATORS
+    public static bool operator ==(LineC a, LineC b) //COMPARATOR 1
+    {
+        return (a.origin == b.origin) && (a.direction == b.direction);
+    }
+
+    public static bool operator !=(LineC a, LineC b) //COMPARATOR 2
+    {
+        return (a.origin != b.origin) || (a.direction != b.direction);
+    }
     #endregion
 
     #region METHODS
-    public float TangentDistanceToOrigin(Vector3C point)
-    {
-        Vector3C originPoint = point - origin;
-        return Vector3C.Dot(originPoint, direction);
-    }
-    public Vector3C PointGivenDistance(float distance)
-    {
-        return origin + direction * distance;
-    }
     public Vector3C NearestPoint(Vector3C point)
     {
-        return PointGivenDistance(TangentDistanceToOrigin(point));
+        Vector3C vector = point - origin;
+        float dot = Vector3C.Dot(direction, vector);
+        Vector3C nearestPoint = origin - direction * dot;
+
+        return nearestPoint;
     }
     #endregion
 
     #region FUNCTIONS
-    public static LineC FromTwoPoints(Vector3C start, Vector3C end)
+    public static LineC CreateLineFromTwoPoints(Vector3C pointA, Vector3C pointB)
     {
-        return new LineC(start, end - start);
+        LineC lineTemp;
+        lineTemp.origin = pointA;
+        lineTemp.direction = pointB - pointA;
+
+        return lineTemp;
     }
     #endregion
 
