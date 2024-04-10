@@ -9,6 +9,7 @@ public class AA2_Cloth
     public struct Settings
     {
         public Vector3C gravity;
+        public float dampingCoef;
         [Min(1)]
         public float width;
         [Min(1)]
@@ -50,20 +51,29 @@ public class AA2_Cloth
         public Vector3C lastPosition;
         public Vector3C actualPosition;
         public Vector3C velocity;
+
+        public bool hasCollisioned;
+
         public Vertex(Vector3C _position)
         {
             this.actualPosition = _position;
             this.lastPosition = _position;
-            this.velocity = new Vector3C(0, 0, 0);
+            this.velocity = Vector3C.zero;
+
+            this.hasCollisioned = false;
         }
+
         public void Euler(Vector3C force, float dt)
         {
             lastPosition = actualPosition;
-            velocity += force * dt;
+
+            if (!hasCollisioned)
+                velocity += force * dt;
+
             actualPosition += velocity * dt;
         }
 
-        public bool CollisionPlane(PlaneC plane, Settings settings)
+        public bool CollisionPlane(PlaneC plane, Settings settings, SphereC sphere)
         {
             // 1. Distance
             double distance = plane.DistanceToPoint(actualPosition);
@@ -71,7 +81,8 @@ public class AA2_Cloth
             if (distance < 0.0f)
             {
                 // 2. Recolocamos la particula 
-                actualPosition = plane.IntersectionWithLine(new LineC(lastPosition, actualPosition));
+                Vector3C sphereToPos = Vector3C.CreateVector3(sphere.position, actualPosition);
+                actualPosition = sphere.position + sphereToPos.normalized * sphere.radius;
 
                 // 3. Colision
                 return true;
@@ -79,26 +90,30 @@ public class AA2_Cloth
             return false;
         }
 
-
         public bool CheckSphere(SphereC sphere, Settings settings)
         {
             // Find the plane
             Vector3C normalizedDistance = (actualPosition - sphere.position).normalized;
             PlaneC plane = new PlaneC(sphere.position + normalizedDistance * sphere.radius, normalizedDistance);
 
-            if (CollisionPlane(plane, settings))
-                return true;
+            if (CollisionPlane(plane, settings, sphere))
+            {
+                Vector3C Vn = plane.normal.normalized * Vector3C.Dot(velocity, plane.normal);
 
+                velocity = (velocity - Vn) * settings.dampingCoef;
+
+                return true;
+            }
             return false;
         }
     }
+
     public Vertex[] points;
     public void Update(float dt)
     {
         int xVertices = settings.xPartSize + 1;
-        int yVertices = settings.yPartSize + 1;
 
-        Vector3C[] structuralForces = new Vector3C[points.Length];
+        Vector3C[] clothForces = new Vector3C[points.Length];
 
         for (int i = 0; i < points.Length; i++)
         {
@@ -114,8 +129,8 @@ public class AA2_Cloth
                 Vector3C dampingForce = (points[i].velocity - points[i - xVertices].velocity) * clothSettings.structuralDampCoef;
                 Vector3C structuralSpringForce = (structuralForceVector * clothSettings.structuralElasticCoef) - dampingForce;
 
-                structuralForces[i] += structuralSpringForce;
-                structuralForces[i - xVertices] += -structuralSpringForce;
+                clothForces[i] += structuralSpringForce;
+                clothForces[i - xVertices] += -structuralSpringForce;
 
             }
 
@@ -130,8 +145,8 @@ public class AA2_Cloth
                 Vector3C dampingForce = (points[i].velocity - points[i - 1].velocity) * clothSettings.structuralDampCoef;
                 Vector3C structuralSpringForce = (structuralForceVector * clothSettings.structuralElasticCoef) - dampingForce;
 
-                structuralForces[i] += structuralSpringForce;
-                structuralForces[i - 1] += -structuralSpringForce;
+                clothForces[i] += structuralSpringForce;
+                clothForces[i - 1] += -structuralSpringForce;
             }
 
             //SHEAR
@@ -143,11 +158,11 @@ public class AA2_Cloth
                                     - points[i].actualPosition).normalized * shearMagnitude * clothSettings.shearElasticCoef;
 
 
-                Vector3C shearDampingForce = (points[i - xVertices + 1].actualPosition - points[i].actualPosition) * clothSettings.shearDampCoef;
+                Vector3C shearDampingForce = (-points[i - xVertices + 1].velocity + points[i].velocity) * clothSettings.shearDampCoef;
                 Vector3C shearSpringForce = shearForceVector * clothSettings.shearElasticCoef - shearDampingForce;
 
-                structuralForces[i] += shearSpringForce;
-                structuralForces[i - xVertices + 1] += -shearSpringForce;
+                clothForces[i] += shearSpringForce;
+                clothForces[i - xVertices + 1] += -shearSpringForce;
             }
 
             //BENDING VERTICAL
@@ -158,12 +173,12 @@ public class AA2_Cloth
                 Vector3C bendForceVector = (points[i - xVertices * 2].actualPosition
                                     - points[i].actualPosition).normalized * bendMagnitudeY * clothSettings.bendingElasticCoef;
 
-                Vector3C bendDampingForce = (points[i - xVertices * 2].actualPosition - points[i].actualPosition) * clothSettings.bendingDampCoef;
+                Vector3C bendDampingForce = (-points[i - xVertices * 2].velocity + points[i].velocity) * clothSettings.bendingDampCoef;
                 Vector3C bendSpringForce = bendForceVector * clothSettings.bendingElasticCoef - bendDampingForce;
 
 
-                structuralForces[i] += bendSpringForce;
-                structuralForces[i - xVertices * 2] += -bendSpringForce;
+                clothForces[i] += bendSpringForce;
+                clothForces[i - xVertices * 2] += -bendSpringForce;
             }
 
             //BENDING HORIZONTAL
@@ -174,12 +189,12 @@ public class AA2_Cloth
                 Vector3C bendForceVector = (points[i - 2].actualPosition
                                     - points[i].actualPosition).normalized * bendMagnitudeX * clothSettings.bendingElasticCoef;
 
-                Vector3C bendDampingForce = (points[i - 2].actualPosition - points[i].actualPosition) * clothSettings.bendingDampCoef;
+                Vector3C bendDampingForce = (-points[i - 2].velocity + points[i].velocity) * clothSettings.bendingDampCoef;
                 Vector3C bendSpringForce = bendForceVector * clothSettings.bendingElasticCoef - bendDampingForce;
 
 
-                structuralForces[i] += bendSpringForce;
-                structuralForces[i - 2] += -bendSpringForce;
+                clothForces[i] += bendSpringForce;
+                clothForces[i - 2] += -bendSpringForce;
             }
         }
 
@@ -187,14 +202,13 @@ public class AA2_Cloth
         {
             if (i != 0 && i != xVertices - 1)
             {
-                points[i].Euler(settings.gravity + structuralForces[i], dt);
+                points[i].hasCollisioned = points[i].CheckSphere(settingsCollision.sphere, settings);
 
-                //if (points[i].CheckSphere(settingsCollision.sphere, settings)) { }
+                points[i].Euler(settings.gravity + clothForces[i], dt);
+                
             }
         }
     }
-
-
 
     public void Debug()
     {
