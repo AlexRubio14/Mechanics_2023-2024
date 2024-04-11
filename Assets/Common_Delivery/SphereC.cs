@@ -27,7 +27,11 @@ public struct SphereC
 
     #region METHODS
 
-   
+    public bool IsInside(Vector3C position)
+    {
+        Vector3C distance = Vector3C.CreateVector3(this.position, position);
+        return distance.magnitude < radius; 
+    }
     #endregion
 
     #region FUNCTIONS

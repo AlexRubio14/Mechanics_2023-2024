@@ -92,14 +92,17 @@ public class AA2_Cloth
             return false;
         }
 
-        public bool CheckSphere(SphereC sphere, Settings settings)
+        public bool CheckSphere(SphereC sphere, Settings settings, SettingsCollision settingsCollision)
         {
             // Find the plane
-            Vector3C normalizedDistance = (actualPosition - sphere.position).normalized;
-            PlaneC plane = new PlaneC(sphere.position + normalizedDistance * sphere.radius, normalizedDistance);
+           
 
-            if (CollisionPlane(plane, settings, sphere))
+            if (settingsCollision.sphere.IsInside(actualPosition))
             {
+                Vector3C sphereToPos = Vector3C.CreateVector3(sphere.position, actualPosition);
+                actualPosition = sphere.position + sphereToPos.normalized * sphere.radius;
+                Vector3C normalizedDistance = (actualPosition - sphere.position).normalized;
+                PlaneC plane = new PlaneC(sphere.position + normalizedDistance * sphere.radius, normalizedDistance);
                 Vector3C Vn = plane.normal.normalized * Vector3C.Dot(velocity, plane.normal);
 
                 velocity = (velocity - Vn) * settings.dampingCoef;
@@ -219,7 +222,7 @@ public class AA2_Cloth
         {
             if (i != 0 && i != xVertices - 1)
             {
-                points[i].hasCollisioned = points[i].CheckSphere(settingsCollision.sphere, settings);
+                points[i].hasCollisioned = points[i].CheckSphere(settingsCollision.sphere, settings, settingsCollision);
 
                 points[i].Euler(settings.gravity + clothForces[i], dt);
                 

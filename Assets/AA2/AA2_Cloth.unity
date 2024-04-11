@@ -226,7 +226,7 @@ MonoBehaviour:
         x: 0
         y: -9.81
         z: 0
-      dampingCoef: 0.5
+      dampingCoef: 0.8
       width: 10
       height: 10
       xPartSize: 10
