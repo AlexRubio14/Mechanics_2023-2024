@@ -232,6 +232,7 @@ MonoBehaviour:
       xPartSize: 10
       yPartSize: 10
     clothSettings:
+      maxSpringL: 1.5
       structuralElasticCoef: 70
       structuralDampCoef: 0.8
       structuralSpringL: 1
@@ -245,6 +246,6 @@ MonoBehaviour:
       sphere:
         position:
           x: 0
-          y: -4
+          y: -7
           z: 0
-        radius: 3
+        radius: 5

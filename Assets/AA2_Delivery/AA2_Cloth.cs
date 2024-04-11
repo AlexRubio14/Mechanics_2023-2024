@@ -23,6 +23,8 @@ public class AA2_Cloth
     [System.Serializable]
     public struct ClothSettings
     {
+        public float maxSpringL;
+
         [Header("Structual Spring")]
         public float structuralElasticCoef;
         public float structuralDampCoef;
@@ -56,11 +58,11 @@ public class AA2_Cloth
 
         public Vertex(Vector3C _position)
         {
-            this.actualPosition = _position;
-            this.lastPosition = _position;
-            this.velocity = Vector3C.zero;
+            actualPosition = _position;
+            lastPosition = _position;
+            velocity = Vector3C.zero;
 
-            this.hasCollisioned = false;
+            hasCollisioned = false;
         }
 
         public void Euler(Vector3C force, float dt)
@@ -120,9 +122,12 @@ public class AA2_Cloth
             // STRUCTURAL VERTICAL
             if( i > xVertices-1)
             {
+                
                 float structuralMagnitudeY = (points[i - xVertices].actualPosition -
                                 points[i].actualPosition).magnitude - clothSettings.structuralSpringL;
-
+                if(structuralMagnitudeY >= clothSettings.maxSpringL)
+                    structuralMagnitudeY = clothSettings.maxSpringL;
+                
                 Vector3C structuralForceVector = (points[i - xVertices].actualPosition
                                     - points[i].actualPosition).normalized * structuralMagnitudeY * clothSettings.structuralElasticCoef;
 
@@ -139,6 +144,9 @@ public class AA2_Cloth
             {
                 float structuralMagnitudeX = (points[i - 1].actualPosition - points[i].actualPosition).magnitude
                                                  - clothSettings.structuralSpringL;
+                if (structuralMagnitudeX >= clothSettings.maxSpringL)
+                    structuralMagnitudeX = clothSettings.maxSpringL;
+
                 Vector3C structuralForceVector = (points[i - 1].actualPosition
                                     - points[i].actualPosition).normalized * structuralMagnitudeX * clothSettings.structuralElasticCoef;
 
@@ -154,6 +162,10 @@ public class AA2_Cloth
             {
                 float shearMagnitude = (points[i - xVertices + 1].actualPosition - points[i].actualPosition).magnitude
                                                  - clothSettings.shearSpringL;
+
+                if (shearMagnitude >= clothSettings.maxSpringL)
+                    shearMagnitude = clothSettings.maxSpringL;
+
                 Vector3C shearForceVector = (points[i - xVertices + 1].actualPosition
                                     - points[i].actualPosition).normalized * shearMagnitude * clothSettings.shearElasticCoef;
 
@@ -170,6 +182,9 @@ public class AA2_Cloth
             {
                 float bendMagnitudeY = (points[i - xVertices * 2].actualPosition - points[i].actualPosition).magnitude
                                                  - clothSettings.bendingSpringL;
+                if (bendMagnitudeY >= clothSettings.maxSpringL * 2)
+                    bendMagnitudeY = clothSettings.maxSpringL * 2;
+
                 Vector3C bendForceVector = (points[i - xVertices * 2].actualPosition
                                     - points[i].actualPosition).normalized * bendMagnitudeY * clothSettings.bendingElasticCoef;
 
@@ -186,12 +201,14 @@ public class AA2_Cloth
             {
                 float bendMagnitudeX = (points[i - 2].actualPosition - points[i].actualPosition).magnitude
                                                  - clothSettings.bendingSpringL;
+                if (bendMagnitudeX >= clothSettings.maxSpringL * 2)
+                    bendMagnitudeX = clothSettings.maxSpringL * 2;
+
                 Vector3C bendForceVector = (points[i - 2].actualPosition
                                     - points[i].actualPosition).normalized * bendMagnitudeX * clothSettings.bendingElasticCoef;
 
                 Vector3C bendDampingForce = (-points[i - 2].velocity + points[i].velocity) * clothSettings.bendingDampCoef;
                 Vector3C bendSpringForce = bendForceVector * clothSettings.bendingElasticCoef - bendDampingForce;
-
 
                 clothForces[i] += bendSpringForce;
                 clothForces[i - 2] += -bendSpringForce;
