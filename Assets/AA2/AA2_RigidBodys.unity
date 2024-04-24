@@ -175,18 +175,70 @@ MonoBehaviour:
         x: 0
         y: -9.8
         z: 0
-      bounce: 1
+      bounce: 0.8
     settingsCollision:
-      planes: []
+      planes:
+      - position:
+          x: 0
+          y: 0
+          z: 0.5
+        normal:
+          x: 0
+          y: 0
+          z: -1
+      - position:
+          x: 0
+          y: 0
+          z: -0.5
+        normal:
+          x: 0
+          y: 0
+          z: 1
+      - position:
+          x: 0
+          y: -0.5
+          z: 0
+        normal:
+          x: 0
+          y: 1
+          z: 0
+      - position:
+          x: 0
+          y: 0.5
+          z: 0
+        normal:
+          x: 0
+          y: -1
+          z: 0
+      - position:
+          x: 0.5
+          y: 0
+          z: 0
+        normal:
+          x: -1
+          y: 0
+          z: 0
+      - position:
+          x: -0.5
+          y: 0
+          z: 0
+        normal:
+          x: 1
+          y: 0
+          z: 0
     crb:
       position:
         x: 0
         y: 0
         z: 0
+      lastPosition:
+        x: 0
+        y: 0
+        z: 0
       size:
-        x: 0.1
-        y: 0.1
-        z: 0.1
+        x: 0.2
+        y: 0.2
+        z: 0.2
       euler:
         x: 0
         y: 0
@@ -197,10 +249,14 @@ MonoBehaviour:
         z: 0
       angularVelocity:
         x: 0
-        y: 0
+        y: 20
         z: 0
       inertialTension: 0
       density: 0
+      vertexs:
+      - x: 0
+        y: 0
+        z: 0
 --- !u!1 &498822787
 GameObject:
   m_ObjectHideFlags: 0
