@@ -227,6 +227,10 @@ MonoBehaviour:
           y: 0
           z: 0
     crb:
+      size:
+        x: 0.2
+        y: 0.2
+        z: 0.2
       position:
         x: 0
         y: 0
@@ -235,28 +239,20 @@ MonoBehaviour:
         x: 0
         y: 0
         z: 0
-      size:
-        x: 0.2
-        y: 0.2
-        z: 0.2
-      euler:
-        x: 0
+      linearVelocity:
+        x: 2.33
         y: 0
         z: 0
-      linearVelocity:
+      euler:
         x: 0
         y: 0
         z: 0
       angularVelocity:
         x: 0
-        y: 20
+        y: 0
         z: 0
       inertialTension: 0
       density: 0
-      vertexs:
-      - x: 0
-        y: 0
-        z: 0
 --- !u!1 &498822787
 GameObject:
   m_ObjectHideFlags: 0

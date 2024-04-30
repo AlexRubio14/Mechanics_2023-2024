@@ -156,6 +156,10 @@ public struct MatrixC
 
         return newPoint;
     }
+    public static Vector3C Rotation(float angleX, float angleY, float angleZ, Vector3C point)
+    {
+        return RotateX(angleX, point) + RotateY(angleY, point) + RotateZ(angleZ, point);
+    }
 
         #endregion
     }
