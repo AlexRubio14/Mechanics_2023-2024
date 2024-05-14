@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.1273174, g: 0.13414761, b: 0.12107885, a: 1}
+  m_IndirectSpecularColor: {r: 0.12731749, g: 0.13414757, b: 0.1210787, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -226,18 +226,26 @@ MonoBehaviour:
         x: 0
         y: -9.81
         z: 0
+      dampingCoef: 1
       width: 10
       height: 10
       xPartSize: 10
       yPartSize: 10
     clothSettings:
-      elasticCoef: 0.8
-      damptCoef: 0
-      springLenght: 0.2
+      maxSpringL: 1.5
+      structuralElasticCoef: 70
+      structuralDampCoef: 0.8
+      structuralSpringL: 1
+      shearElasticCoef: 1
+      shearDampCoef: 0.8
+      shearSpringL: 0.1
+      bendingElasticCoef: 2
+      bendingDampCoef: 0.8
+      bendingSpringL: 1
     settingsCollision:
       sphere:
         position:
           x: 0
-          y: -4
+          y: -7
           z: 0
-        radius: 3
+        radius: 5
