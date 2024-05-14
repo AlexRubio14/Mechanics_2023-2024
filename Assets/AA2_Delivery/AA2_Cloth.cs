@@ -1,4 +1,3 @@
-
 using System.Drawing;
 using UnityEngine;
 
@@ -50,31 +49,89 @@ public class AA2_Cloth
     public SettingsCollision settingsCollision;
     public struct Vertex
     {
+        // ATTRIBUTES
         public Vector3C lastPosition;
         public Vector3C actualPosition;
         public Vector3C velocity;
 
-        public bool hasCollisioned;
-
+        // CONSTRUCTOR
         public Vertex(Vector3C _position)
         {
             actualPosition = _position;
             lastPosition = _position;
             velocity = Vector3C.zero;
-
-            hasCollisioned = false;
         }
 
+        // FORCE METHODS
         public void Euler(Vector3C force, float dt)
         {
             lastPosition = actualPosition;
-
-            if (!hasCollisioned)
-                velocity += force * dt;
-
+            velocity += force * dt;
             actualPosition += velocity * dt;
         }
+        public Vector3C StructuralSpring(Vertex otherPoint, ClothSettings clothSettings)
+        {
+            float structuralMagnitude = (otherPoint.actualPosition - this.actualPosition).magnitude - clothSettings.structuralSpringL;
 
+            if (structuralMagnitude >= clothSettings.maxSpringL)
+                structuralMagnitude = clothSettings.maxSpringL;
+
+            Vector3C structuralForceVector = (otherPoint.actualPosition
+                                - this.actualPosition).normalized * structuralMagnitude * clothSettings.structuralElasticCoef;
+
+            Vector3C dampingForce = (this.velocity - otherPoint.velocity) * clothSettings.structuralDampCoef;
+            Vector3C structuralSpringForce = (structuralForceVector * clothSettings.structuralElasticCoef) - dampingForce;
+
+            return structuralSpringForce; 
+        }
+        public Vector3C ShearSpring(Vertex otherPoint, ClothSettings clothSettings)
+        {
+            float shearMagnitude = (otherPoint.actualPosition - this.actualPosition).magnitude - clothSettings.shearSpringL;
+
+            if (shearMagnitude >= clothSettings.maxSpringL)
+                shearMagnitude = clothSettings.maxSpringL;
+
+            Vector3C shearForceVector = (otherPoint.actualPosition
+                                - this.actualPosition).normalized * shearMagnitude * clothSettings.shearElasticCoef;
+
+            Vector3C shearDampingForce = (-otherPoint.velocity + this.velocity) * clothSettings.shearDampCoef;
+            Vector3C shearSpringForce = shearForceVector * clothSettings.shearElasticCoef - shearDampingForce;
+
+            return shearSpringForce;
+        }
+        public Vector3C BendingSpring(Vertex otherPoint, ClothSettings clothSettings)
+        {
+            float bendMagnitudeY = (otherPoint.actualPosition - this.actualPosition).magnitude - clothSettings.bendingSpringL;
+
+            if (bendMagnitudeY >= clothSettings.maxSpringL * 2)
+                bendMagnitudeY = clothSettings.maxSpringL * 2;
+
+            Vector3C bendForceVector = (otherPoint.actualPosition
+                                - this.actualPosition).normalized * bendMagnitudeY * clothSettings.bendingElasticCoef;
+
+            Vector3C bendDampingForce = (-otherPoint.velocity + this.velocity) * clothSettings.bendingDampCoef;
+            Vector3C bendSpringForce = bendForceVector * clothSettings.bendingElasticCoef - bendDampingForce;
+
+            return bendSpringForce;
+        }
+
+        // COLLISION METHODS
+        public bool CheckSphere(SphereC sphere, Settings settings, SettingsCollision settingsCollision)
+        {
+            if (settingsCollision.sphere.IsInside(actualPosition))
+            {
+                Vector3C sphereToPos = Vector3C.CreateVector3(sphere.position, actualPosition);
+                actualPosition = sphere.position + sphereToPos.normalized * sphere.radius;
+                Vector3C normalizedDistance = (actualPosition - sphere.position).normalized;
+                PlaneC plane = new PlaneC(sphere.position + normalizedDistance * sphere.radius, normalizedDistance);
+                Vector3C Vn = plane.normal.normalized * Vector3C.Dot(velocity, plane.normal);
+
+                velocity = (velocity - Vn) * settings.dampingCoef;
+
+                return true;
+            }
+            return false;
+        }
         public bool CollisionPlane(PlaneC plane, Settings settings, SphereC sphere)
         {
             // 1. Distance
@@ -91,70 +148,27 @@ public class AA2_Cloth
             }
             return false;
         }
-
-        public bool CheckSphere(SphereC sphere, Settings settings, SettingsCollision settingsCollision)
-        {
-            // Find the plane
-           
-
-            if (settingsCollision.sphere.IsInside(actualPosition))
-            {
-                Vector3C sphereToPos = Vector3C.CreateVector3(sphere.position, actualPosition);
-                actualPosition = sphere.position + sphereToPos.normalized * sphere.radius;
-                Vector3C normalizedDistance = (actualPosition - sphere.position).normalized;
-                PlaneC plane = new PlaneC(sphere.position + normalizedDistance * sphere.radius, normalizedDistance);
-                Vector3C Vn = plane.normal.normalized * Vector3C.Dot(velocity, plane.normal);
-
-                velocity = (velocity - Vn) * settings.dampingCoef;
-
-                return true;
-            }
-            return false;
-        }
     }
 
     public Vertex[] points;
-    public void Update(float dt)
+    public Vector3C[] CalculateClothForces(Vertex[] points, int xVertices)
     {
-        int xVertices = settings.xPartSize + 1;
-
         Vector3C[] clothForces = new Vector3C[points.Length];
 
         for (int i = 0; i < points.Length; i++)
         {
             // STRUCTURAL VERTICAL
-            if( i > xVertices-1)
+            if (i > xVertices - 1)
             {
-                
-                float structuralMagnitudeY = (points[i - xVertices].actualPosition -
-                                points[i].actualPosition).magnitude - clothSettings.structuralSpringL;
-                if(structuralMagnitudeY >= clothSettings.maxSpringL)
-                    structuralMagnitudeY = clothSettings.maxSpringL;
-                
-                Vector3C structuralForceVector = (points[i - xVertices].actualPosition
-                                    - points[i].actualPosition).normalized * structuralMagnitudeY * clothSettings.structuralElasticCoef;
-
-                Vector3C dampingForce = (points[i].velocity - points[i - xVertices].velocity) * clothSettings.structuralDampCoef;
-                Vector3C structuralSpringForce = (structuralForceVector * clothSettings.structuralElasticCoef) - dampingForce;
+                Vector3C structuralSpringForce = points[i].StructuralSpring(points[i - xVertices], clothSettings);
 
                 clothForces[i] += structuralSpringForce;
                 clothForces[i - xVertices] += -structuralSpringForce;
-
             }
-
             //STRUCTURAL HORIZONTAL
             if (i % xVertices != 0)
             {
-                float structuralMagnitudeX = (points[i - 1].actualPosition - points[i].actualPosition).magnitude
-                                                 - clothSettings.structuralSpringL;
-                if (structuralMagnitudeX >= clothSettings.maxSpringL)
-                    structuralMagnitudeX = clothSettings.maxSpringL;
-
-                Vector3C structuralForceVector = (points[i - 1].actualPosition
-                                    - points[i].actualPosition).normalized * structuralMagnitudeX * clothSettings.structuralElasticCoef;
-
-                Vector3C dampingForce = (points[i].velocity - points[i - 1].velocity) * clothSettings.structuralDampCoef;
-                Vector3C structuralSpringForce = (structuralForceVector * clothSettings.structuralElasticCoef) - dampingForce;
+                Vector3C structuralSpringForce = points[i].StructuralSpring(points[i - 1], clothSettings);
 
                 clothForces[i] += structuralSpringForce;
                 clothForces[i - 1] += -structuralSpringForce;
@@ -163,18 +177,7 @@ public class AA2_Cloth
             //SHEAR
             if (i > xVertices - 1 && i % xVertices - 1 != 0)
             {
-                float shearMagnitude = (points[i - xVertices + 1].actualPosition - points[i].actualPosition).magnitude
-                                                 - clothSettings.shearSpringL;
-
-                if (shearMagnitude >= clothSettings.maxSpringL)
-                    shearMagnitude = clothSettings.maxSpringL;
-
-                Vector3C shearForceVector = (points[i - xVertices + 1].actualPosition
-                                    - points[i].actualPosition).normalized * shearMagnitude * clothSettings.shearElasticCoef;
-
-
-                Vector3C shearDampingForce = (-points[i - xVertices + 1].velocity + points[i].velocity) * clothSettings.shearDampCoef;
-                Vector3C shearSpringForce = shearForceVector * clothSettings.shearElasticCoef - shearDampingForce;
+                Vector3C shearSpringForce = points[i].ShearSpring(points[i - xVertices + 1], clothSettings);
 
                 clothForces[i] += shearSpringForce;
                 clothForces[i - xVertices + 1] += -shearSpringForce;
@@ -183,51 +186,42 @@ public class AA2_Cloth
             //BENDING VERTICAL
             if (i > xVertices * 2 - 1)
             {
-                float bendMagnitudeY = (points[i - xVertices * 2].actualPosition - points[i].actualPosition).magnitude
-                                                 - clothSettings.bendingSpringL;
-                if (bendMagnitudeY >= clothSettings.maxSpringL * 2)
-                    bendMagnitudeY = clothSettings.maxSpringL * 2;
-
-                Vector3C bendForceVector = (points[i - xVertices * 2].actualPosition
-                                    - points[i].actualPosition).normalized * bendMagnitudeY * clothSettings.bendingElasticCoef;
-
-                Vector3C bendDampingForce = (-points[i - xVertices * 2].velocity + points[i].velocity) * clothSettings.bendingDampCoef;
-                Vector3C bendSpringForce = bendForceVector * clothSettings.bendingElasticCoef - bendDampingForce;
-
+                Vector3C bendSpringForce = points[i].BendingSpring(points[i - xVertices * 2], clothSettings);
 
                 clothForces[i] += bendSpringForce;
                 clothForces[i - xVertices * 2] += -bendSpringForce;
             }
-
             //BENDING HORIZONTAL
             if (i % xVertices != 0 && i % xVertices != 1)
             {
-                float bendMagnitudeX = (points[i - 2].actualPosition - points[i].actualPosition).magnitude
-                                                 - clothSettings.bendingSpringL;
-                if (bendMagnitudeX >= clothSettings.maxSpringL * 2)
-                    bendMagnitudeX = clothSettings.maxSpringL * 2;
-
-                Vector3C bendForceVector = (points[i - 2].actualPosition
-                                    - points[i].actualPosition).normalized * bendMagnitudeX * clothSettings.bendingElasticCoef;
-
-                Vector3C bendDampingForce = (-points[i - 2].velocity + points[i].velocity) * clothSettings.bendingDampCoef;
-                Vector3C bendSpringForce = bendForceVector * clothSettings.bendingElasticCoef - bendDampingForce;
+                Vector3C bendSpringForce = points[i].BendingSpring(points[i - 2], clothSettings);
 
                 clothForces[i] += bendSpringForce;
                 clothForces[i - 2] += -bendSpringForce;
             }
         }
 
-        for(int i = 0; i < points.Length; i++)
+        return clothForces;
+    }
+    public void VertexBehaviour(Vertex[] points, Vector3C[] clothForces, float dt)
+    {
+        for (int i = 0; i < points.Length; i++)
         {
-            if (i != 0 && i != xVertices - 1)
+            if (i != 0 && i != settings.xPartSize)
             {
-                points[i].hasCollisioned = points[i].CheckSphere(settingsCollision.sphere, settings, settingsCollision);
-
+                // CHECK COLLISION
+                points[i].CheckSphere(settingsCollision.sphere, settings, settingsCollision);
+                // APPLY FORCES
                 points[i].Euler(settings.gravity + clothForces[i], dt);
-                
             }
         }
+    }
+
+    public void Update(float dt)
+    {
+        Vector3C[] clothForces = CalculateClothForces(points, settings.xPartSize + 1);
+
+        VertexBehaviour(points, clothForces, dt);
     }
 
     public void Debug()
