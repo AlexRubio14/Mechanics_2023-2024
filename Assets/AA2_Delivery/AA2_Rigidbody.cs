@@ -1,6 +1,8 @@
 using JetBrains.Annotations;
 using System.Diagnostics;
 using System.Drawing;
+using System.Numerics;
+using UnityEditor.ShaderGraph;
 using static AA2_Cloth;
 
 [System.Serializable]
@@ -24,6 +26,7 @@ public class AA2_Rigidbody
     [System.Serializable]
     public struct CubeRigidbody
     {
+        // ATTRIBUTES
         public Vector3C size;
         private Vector3C[] vertexs;
 
@@ -37,21 +40,25 @@ public class AA2_Rigidbody
         public float inertialTension;
         public float density;
         
+        // CONSTRUCTOR
         public CubeRigidbody(Vector3C _position, Vector3C _size, Vector3C _euler)
         {
             size = _size;
+
             vertexs = new Vector3C[8]
             {
                 new Vector3C(-(_size.x),  (_size.y), -(_size.z)),
                 new Vector3C(-(_size.x),  (_size.y),  (_size.z)),
                 new Vector3C(-(_size.x), -(_size.y), -(_size.z)),
                 new Vector3C(-(_size.x), -(_size.y),  (_size.z)),
-                                       
+
                 new Vector3C((_size.x),  (_size.y), -(_size.z)),
                 new Vector3C((_size.x), -(_size.y), -(_size.z)),
                 new Vector3C((_size.x),  (_size.y),  (_size.z)),
                 new Vector3C((_size.x), -(_size.y),  (_size.z))
-            }; 
+            };
+            for (int i = 0; i < vertexs.Length; i++)
+                vertexs[i] = MatrixC.RotateX(_euler.x, vertexs[i]);
 
             lastPosition = _position;
             position = _position;
@@ -64,6 +71,12 @@ public class AA2_Rigidbody
             density = 0;
         }
 
+        public Vector3C[] GetVertexs()
+        {
+            return vertexs; 
+        }
+
+        // FORCES METHODS
         public void Euler(Vector3C force, float dt)
         {
             lastPosition = position;
@@ -72,16 +85,21 @@ public class AA2_Rigidbody
             euler += angularVelocity * dt;
             
             position += linearVelocity * dt;
+
         }
+
+        // COLLISIONS METHODS
         public bool CheckPlanes(PlaneC[] _planes, Settings _settings)
         {
             foreach (PlaneC plane in _planes)
             {
                 // Check each vertex of the cube with all the planes
-                foreach(Vector3C vertex in vertexs)
+                for(int i = 0; i < vertexs.Length; i++)
                 {
-                    // Check collision with the coord.world
-                    if (CollisionPlane(vertex + position, plane, _settings))
+                    //vertexs[i] = MatrixC.Rotation(euler, vertexs[i]);
+
+                    //Check collision with the coord.world
+                    if (CollisionPlane(vertexs[i] + position, plane, _settings))
                         return true;
                 }
             }
@@ -112,6 +130,7 @@ public class AA2_Rigidbody
             linearVelocity = ((linearVelocity - Vn) - Vn) * _settings.bounce;
         }
     }
+
     public CubeRigidbody crb = new CubeRigidbody(Vector3C.zero, new Vector3C(0.1f,0.1f,0.1f), Vector3C.zero);
     public void Update(float dt)
     {
@@ -122,11 +141,29 @@ public class AA2_Rigidbody
         crb.Euler(settings.gravity, dt);
     }
 
+    public void GetOthersRigidbodysArray(AA2_Rigidbody[] allRigidbodies)
+    {
+        AA2_Rigidbody[] othersRigidbodys = new AA2_Rigidbody[allRigidbodies.Length - 1];
+        int index = 0;
+        for (int i = 0; i < allRigidbodies.Length; i++)
+        {
+            if (allRigidbodies[i] != this)
+            {
+                othersRigidbodys[index++] = allRigidbodies[i];
+            }
+        }
+        // Aquest array conté els altres rigidbodys amb els quals podreu interactuar.
+    }
+
     public void Debug()
     {
-        foreach (var item in settingsCollision.planes)
+        //foreach (var item in settingsCollision.planes)
+            //item.Print(Vector3C.red);
+        
+        foreach(var vertex in crb.GetVertexs())
         {
-            item.Print(Vector3C.red);
+            SphereC sphere = new SphereC(vertex + crb.position, 0.01f);
+            sphere.Print(Vector3C.green);
         }
     }
 }

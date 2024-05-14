@@ -37,16 +37,11 @@ public struct MatrixC
     #region OPERATORS
     public static Vector3C operator *(MatrixC matrix, Vector3C point)
     {
-        if (matrix.size != 3)
-            return Vector3C.zero;
-
-        Vector3C newPoint = new Vector3C();
-
-        newPoint.x = point.x * matrix.data[0,0] + point.y * matrix.data[0,1] + point.z * matrix.data[0,2];
-        newPoint.y = point.x * matrix.data[1,0] + point.y * matrix.data[1,1] + point.z * matrix.data[1,2];
-        newPoint.z = point.x * matrix.data[2,0] + point.y * matrix.data[2,1] + point.z * matrix.data[2,2];
-
-        return newPoint;
+        return new Vector3C(
+            /* X */ point.x * matrix.data[0, 0] + point.y * matrix.data[0, 1] + point.z * matrix.data[0, 2],
+            /* Y */ point.x * matrix.data[1, 0] + point.y * matrix.data[1, 1] + point.z * matrix.data[1, 2],
+            /* Z */ point.x * matrix.data[2, 0] + point.y * matrix.data[2, 1] + point.z * matrix.data[2, 2]
+            );
     }
     public static MatrixC operator *(MatrixC m1, MatrixC m2)
     {
@@ -128,38 +123,37 @@ public struct MatrixC
     }
     public static Vector3C RotateX(float angle, Vector3C point)
     {
-        Vector3C newPoint = new Vector3C();
+        MatrixC matrixRotateX = new MatrixC(new float[,] {
+                  { 1.0f, 0.0f            , 0.0f              },
+                  { 0.0f, MathF.Cos(angle), -MathF.Sin(angle) },
+                  { 0.0f, MathF.Sin(angle),  MathF.Cos(angle) }
+                });
 
-        newPoint.x = point.x;
-        newPoint.y = point.y * MathF.Cos(angle) + point.z * (-MathF.Sin(angle));
-        newPoint.z = point.y * MathF.Sin(angle) + point.z * (MathF.Cos(angle));
-
-        return newPoint;
+        return matrixRotateX * point;
     }
     public static Vector3C RotateY(float angle, Vector3C point)
     {
-        Vector3C newPoint = new Vector3C();
+        MatrixC matrixRotateY = new MatrixC(new float[,] {
+                  {  MathF.Cos(angle), 0.0f, MathF.Sin(angle) },
+                  { 0.0f             , 1.0f, 0.0f             },
+                  { -MathF.Sin(angle), 0.0f, MathF.Cos(angle) }
+                });
 
-        newPoint.x = point.x * MathF.Cos(angle) + point.z * (MathF.Sin(angle));
-        newPoint.y = point.y;
-        newPoint.z = point.x * (-MathF.Sin(angle)) + point.z * MathF.Cos(angle);
-
-        return newPoint;
+        return matrixRotateY * point;
     }
     public static Vector3C RotateZ(float angle, Vector3C point)
     {
-        Vector3C newPoint = new Vector3C(); 
+        MatrixC matrixRotateZ = new MatrixC(new float[,] {
+                  { MathF.Cos(angle), -MathF.Sin(angle), 0.0f },
+                  { MathF.Sin(angle),  MathF.Cos(angle), 0.0f },
+                  { 0.0f            , 0.0f             , 1.0f }
+                });
 
-        newPoint.x = point.x * MathF.Cos(angle) + point.y * (-MathF.Sin(angle));
-        newPoint.y = point.x * MathF.Sin(angle) + point.y * (MathF.Cos(angle));
-        newPoint.z = point.z;
-
-        return newPoint;
+        return matrixRotateZ * point;
     }
-    public static Vector3C Rotation(float angleX, float angleY, float angleZ, Vector3C point)
+    public static Vector3C Rotation(Vector3C euler, Vector3C point)
     {
-        return RotateX(angleX, point) + RotateY(angleY, point) + RotateZ(angleZ, point);
+        return RotateX(euler.x, point) * RotateY(euler.y, point) * RotateZ(euler.z, point);
     }
-
         #endregion
     }
