@@ -3,6 +3,7 @@ using System.Data;
 using System.Security.Cryptography;
 using UnityEditor.ShaderGraph.Internal;
 using UnityEngine.Rendering;
+using UnityEngine.UIElements;
 
 [System.Serializable]
 public struct MatrixC
@@ -45,8 +46,25 @@ public struct MatrixC
     }
     public static MatrixC operator *(MatrixC m1, MatrixC m2)
     {
-        
-        return MatrixC.identity3x3;
+        MatrixC newMatrix = new MatrixC(new float[,]
+        {
+            {
+                m1.data[0, 0] * m2.data[0, 0] + m1.data[0, 1] * m2.data[1, 0] + m1.data[0, 2] * m2.data[2, 0],
+                m1.data[0, 0] * m2.data[0, 1] + m1.data[0, 1] * m2.data[1, 1] + m1.data[0, 2] * m2.data[2, 1],
+                m1.data[0, 0] * m2.data[0, 2] + m1.data[0, 1] * m2.data[1, 2] + m1.data[0, 2] * m2.data[2, 2],
+            },
+            {
+                m1.data[1, 0] * m2.data[0, 0] + m1.data[1, 1] * m2.data[1, 0] + m1.data[1, 2] * m2.data[2, 0],
+                m1.data[1, 0] * m2.data[0, 1] + m1.data[1, 1] * m2.data[1, 1] + m1.data[1, 2] * m2.data[2, 1],
+                m1.data[1, 0] * m2.data[0, 2] + m1.data[1, 1] * m2.data[1, 2] + m1.data[1, 2] * m2.data[2, 2],
+            }, 
+            {
+                m1.data[2, 0] * m2.data[0, 0] + m1.data[2, 1] * m2.data[1, 0] + m1.data[2, 2] * m2.data[2, 0],
+                m1.data[2, 0] * m2.data[0, 1] + m1.data[2, 1] * m2.data[1, 1] + m1.data[2, 2] * m2.data[2, 1],
+                m1.data[2, 0] * m2.data[0, 2] + m1.data[2, 1] * m2.data[1, 2] + m1.data[2, 2] * m2.data[2, 2],
+            }
+        }); 
+        return newMatrix;
     }
     public static MatrixC operator *(MatrixC m1, float product)
     {
@@ -121,39 +139,52 @@ public struct MatrixC
 
         return result;
     }
-    public static Vector3C RotateX(float angle, Vector3C point)
+    public static MatrixC RotateX(float angle)
     {
-        MatrixC matrixRotateX = new MatrixC(new float[,] {
+        return new MatrixC(new float[,] {
                   { 1.0f, 0.0f            , 0.0f              },
                   { 0.0f, MathF.Cos(angle), -MathF.Sin(angle) },
                   { 0.0f, MathF.Sin(angle),  MathF.Cos(angle) }
                 });
 
-        return matrixRotateX * point;
     }
-    public static Vector3C RotateY(float angle, Vector3C point)
+    public static MatrixC RotateY(float angle)
     {
-        MatrixC matrixRotateY = new MatrixC(new float[,] {
+        return new MatrixC(new float[,] {
                   {  MathF.Cos(angle), 0.0f, MathF.Sin(angle) },
                   { 0.0f             , 1.0f, 0.0f             },
                   { -MathF.Sin(angle), 0.0f, MathF.Cos(angle) }
                 });
 
-        return matrixRotateY * point;
     }
-    public static Vector3C RotateZ(float angle, Vector3C point)
+    public static MatrixC RotateZ(float angle)
     {
-        MatrixC matrixRotateZ = new MatrixC(new float[,] {
+        return new MatrixC(new float[,] {
                   { MathF.Cos(angle), -MathF.Sin(angle), 0.0f },
                   { MathF.Sin(angle),  MathF.Cos(angle), 0.0f },
                   { 0.0f            , 0.0f             , 1.0f }
                 });
-
-        return matrixRotateZ * point;
     }
     public static Vector3C Rotation(Vector3C euler, Vector3C point)
     {
-        return RotateX(euler.x, point) * RotateY(euler.y, point) * RotateZ(euler.z, point);
+        Vector3C tmpEuler = euler * (float)MathF.PI / 180;
+
+        MatrixC rotationMatrix = new MatrixC(new float[,] {
+            { MathF.Cos(tmpEuler.y) * MathF.Cos(tmpEuler.z), 
+              (MathF.Sin(tmpEuler.x) * MathF.Sin(tmpEuler.y) * MathF.Cos(tmpEuler.z)) - (MathF.Cos(tmpEuler.x) * MathF.Sin(tmpEuler.z)), 
+              (MathF.Cos(tmpEuler.x) * MathF.Sin(tmpEuler.y) * MathF.Cos(tmpEuler.z)) + (MathF.Sin(tmpEuler.x) * MathF.Sin(tmpEuler.z))
+            },
+            { MathF.Cos(tmpEuler.y) * MathF.Sin(tmpEuler.z),
+              (MathF.Sin(tmpEuler.x) * MathF.Sin(tmpEuler.y) * MathF.Sin(tmpEuler.z)) + (MathF.Cos(tmpEuler.x) * MathF.Cos(tmpEuler.z)), 
+              (MathF.Cos(tmpEuler.x) * MathF.Sin(tmpEuler.y) * MathF.Sin(tmpEuler.z)) - (MathF.Sin(tmpEuler.x) * MathF.Cos(tmpEuler.z))
+            },
+            { -1 * MathF.Sin(tmpEuler.y),   
+              MathF.Sin(tmpEuler.x) * MathF.Cos(tmpEuler.y),
+              MathF.Cos(tmpEuler.x) * MathF.Cos(tmpEuler.y)
+            }
+        });
+
+        return RotateX(tmpEuler.x) * (RotateY(tmpEuler.y) * RotateZ(tmpEuler.z)) * point;
     }
         #endregion
     }

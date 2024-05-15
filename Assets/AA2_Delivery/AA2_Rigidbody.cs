@@ -1,3 +1,4 @@
+using System;
 using JetBrains.Annotations;
 using System.Diagnostics;
 using System.Drawing;
@@ -28,6 +29,7 @@ public class AA2_Rigidbody
     {
         // ATTRIBUTES
         public Vector3C size;
+        private Vector3C[] offsetVertex;
         private Vector3C[] vertexs;
 
         public Vector3C position;
@@ -44,8 +46,10 @@ public class AA2_Rigidbody
         public CubeRigidbody(Vector3C _position, Vector3C _size, Vector3C _euler)
         {
             size = _size;
+            euler = _euler;
 
-            vertexs = new Vector3C[8]
+            vertexs = new Vector3C[8];
+            offsetVertex = new Vector3C[8]
             {
                 new Vector3C(-(_size.x),  (_size.y), -(_size.z)),
                 new Vector3C(-(_size.x),  (_size.y),  (_size.z)),
@@ -57,14 +61,12 @@ public class AA2_Rigidbody
                 new Vector3C((_size.x),  (_size.y),  (_size.z)),
                 new Vector3C((_size.x), -(_size.y),  (_size.z))
             };
-            for (int i = 0; i < vertexs.Length; i++)
-                vertexs[i] = MatrixC.RotateX(_euler.x, vertexs[i]);
+
 
             lastPosition = _position;
             position = _position;
             linearVelocity = Vector3C.zero;
 
-            euler = _euler;
             angularVelocity = Vector3C.zero;
             
             inertialTension = 0;
@@ -80,12 +82,16 @@ public class AA2_Rigidbody
         public void Euler(Vector3C force, float dt)
         {
             lastPosition = position;
-            
+
             linearVelocity += force * dt;
             euler += angularVelocity * dt;
             
             position += linearVelocity * dt;
-
+        }
+        public void VertexSet(float _dt)
+        {
+            for (int i = 0; i < vertexs.Length; i++)
+                vertexs[i] = MatrixC.Rotation(euler, offsetVertex[i]);
         }
 
         // COLLISIONS METHODS
@@ -134,8 +140,11 @@ public class AA2_Rigidbody
     public CubeRigidbody crb = new CubeRigidbody(Vector3C.zero, new Vector3C(0.1f,0.1f,0.1f), Vector3C.zero);
     public void Update(float dt)
     {
+        crb.VertexSet(dt);
+
         // 1. Collisions
         crb.CheckPlanes(settingsCollision.planes, settings);
+
 
         // 2. Forces
         crb.Euler(settings.gravity, dt);
