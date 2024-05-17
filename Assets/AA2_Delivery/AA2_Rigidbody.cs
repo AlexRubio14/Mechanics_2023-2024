@@ -1,9 +1,3 @@
-using System;
-using JetBrains.Annotations;
-using System.Diagnostics;
-using System.Drawing;
-using System.Numerics;
-using UnityEditor.ShaderGraph;
 using static AA2_Cloth;
 
 [System.Serializable]
@@ -62,11 +56,9 @@ public class AA2_Rigidbody
                 new Vector3C((_size.x), -(_size.y),  (_size.z))
             };
 
-
             lastPosition = _position;
             position = _position;
             linearVelocity = Vector3C.zero;
-
             angularVelocity = Vector3C.zero;
             
             inertialTension = 0;
@@ -84,14 +76,14 @@ public class AA2_Rigidbody
             lastPosition = position;
 
             linearVelocity += force * dt;
+
             euler += angularVelocity * dt;
-            
             position += linearVelocity * dt;
         }
         public void VertexSet(float _dt)
         {
             for (int i = 0; i < vertexs.Length; i++)
-                vertexs[i] = MatrixC.Rotation(euler, offsetVertex[i]);
+                vertexs[i] = MatrixC.Rotation(euler, offsetVertex[i]) + position;
         }
 
         // COLLISIONS METHODS
@@ -102,10 +94,8 @@ public class AA2_Rigidbody
                 // Check each vertex of the cube with all the planes
                 for(int i = 0; i < vertexs.Length; i++)
                 {
-                    //vertexs[i] = MatrixC.Rotation(euler, vertexs[i]);
-
                     //Check collision with the coord.world
-                    if (CollisionPlane(vertexs[i] + position, plane, _settings))
+                    if (CollisionPlane(vertexs[i], plane, _settings))
                         return true;
                 }
             }
@@ -145,7 +135,6 @@ public class AA2_Rigidbody
         // 1. Collisions
         crb.CheckPlanes(settingsCollision.planes, settings);
 
-
         // 2. Forces
         crb.Euler(settings.gravity, dt);
     }
@@ -171,7 +160,7 @@ public class AA2_Rigidbody
         
         foreach(var vertex in crb.GetVertexs())
         {
-            SphereC sphere = new SphereC(vertex + crb.position, 0.01f);
+            SphereC sphere = new SphereC(vertex, 0.01f);
             sphere.Print(Vector3C.green);
         }
     }
