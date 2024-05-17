@@ -101,13 +101,13 @@ public class AA2_Cloth
         }
         public Vector3C BendingSpring(Vertex otherPoint, ClothSettings clothSettings)
         {
-            float bendMagnitudeY = (otherPoint.actualPosition - this.actualPosition).magnitude - clothSettings.bendingSpringL;
+            float bendMagnitude = (otherPoint.actualPosition - this.actualPosition).magnitude - clothSettings.bendingSpringL;
 
-            if (bendMagnitudeY >= clothSettings.maxSpringL * 2)
-                bendMagnitudeY = clothSettings.maxSpringL * 2;
+            if (bendMagnitude >= clothSettings.maxSpringL * 2)
+                bendMagnitude = clothSettings.maxSpringL * 2;
 
             Vector3C bendForceVector = (otherPoint.actualPosition
-                                - this.actualPosition).normalized * bendMagnitudeY * clothSettings.bendingElasticCoef;
+                                - this.actualPosition).normalized * bendMagnitude * clothSettings.bendingElasticCoef;
 
             Vector3C bendDampingForce = (-otherPoint.velocity + this.velocity) * clothSettings.bendingDampCoef;
             Vector3C bendSpringForce = bendForceVector * clothSettings.bendingElasticCoef - bendDampingForce;
@@ -128,22 +128,6 @@ public class AA2_Cloth
 
                 velocity = (velocity - Vn) * settings.dampingCoef;
 
-                return true;
-            }
-            return false;
-        }
-        public bool CollisionPlane(PlaneC plane, Settings settings, SphereC sphere)
-        {
-            // 1. Distance
-            double distance = plane.DistanceToPoint(actualPosition);
-
-            if (distance < 0.0f)
-            {
-                // 2. Recolocamos la particula 
-                Vector3C sphereToPos = Vector3C.CreateVector3(sphere.position, actualPosition);
-                actualPosition = sphere.position + sphereToPos.normalized * sphere.radius;
-
-                // 3. Colision
                 return true;
             }
             return false;
