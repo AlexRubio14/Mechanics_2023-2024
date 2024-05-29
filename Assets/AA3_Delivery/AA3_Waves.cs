@@ -1,33 +1,8 @@
-using JetBrains.Annotations;
 using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Unity.Android.Types;
-using UnityEngine;
-using static AA3_Waves;
 
 [System.Serializable]
 public class AA3_Waves
 {
-    [System.Serializable]
-    public struct Settings
-    {
-
-    }
-    public Settings settings;
-
-    [System.Serializable]
-    public struct BuoySettings
-    {
-        public float buoyancyCoefficient;
-        public float buoyVelocity;
-        public float mass;
-        public float waterDensity;
-        public float gravity;
-    }
-
-    public BuoySettings buoySettings;
-
     [System.Serializable]
     public struct WavesSettings
     {
@@ -37,7 +12,30 @@ public class AA3_Waves
 
         public Vector3C direction;
         public float speed;
+
+        public void Update(ref Vertex[] points, float elapsedTime)
+        {
+            for (int i = 0; i < points.Length; i++)
+            {
+                points[i].position = points[i].originalposition;
+
+                float k = 2 * (float)Math.PI / frequency;
+
+                points[i].position.x += points[i].originalposition.x + amplitude * k
+                    * (float)Math.Cos(k * (Vector3C.Dot(points[i].originalposition, direction) + elapsedTime * speed)
+                    + phase) * direction.x;
+
+                points[i].position.z += points[i].originalposition.z + amplitude * k
+                    * (float)Math.Cos(k * (Vector3C.Dot(points[i].originalposition, direction) + elapsedTime * speed)
+                    + phase) * direction.z;
+
+                points[i].position.y += amplitude
+                    * (float)Math.Sin(k * (Vector3C.Dot(points[i].originalposition, direction) + elapsedTime * speed)
+                    + phase);
+            }
+        }
     }
+
     public WavesSettings[] wavesSettings;
     public struct Vertex
     {
@@ -45,91 +43,94 @@ public class AA3_Waves
         public Vector3C position;
         public Vertex(Vector3C _position)
         {
-            this.position = _position;
-            this.originalposition = _position;
+            position = _position;
+            originalposition = _position;
         }
     }
     public Vertex[] points;
-    private float elapsedTime = 0;
+
+    [System.Serializable]
+    public struct BuoySettings
+    {
+        public float buoyancyCoefficient;
+        public float buoyVelocity;
+        public float mass;
+        public float waterDensity;
+        public float gravity;
+
+        public void Update(ref SphereC buoy, float dt, WavesSettings[] wavesSettings, float elapsedTime)
+        {
+            Euler(ref buoy, dt, wavesSettings, elapsedTime);
+        }
+
+        public float GetWaveHeight(WavesSettings[] wavesSettings, SphereC buoy, float elapsedTime)
+        {
+            float Yposition = 0;
+            for (int j = 0; j < wavesSettings.Length; j++)
+            {
+                float k = 2 * (float)Math.PI / wavesSettings[j].frequency;
+                Yposition += wavesSettings[j].amplitude
+                * (float)Math.Sin(k * (Vector3C.Dot(buoy.position, wavesSettings[j].direction) + elapsedTime * wavesSettings[j].speed)
+                + wavesSettings[j].phase);
+            }
+
+            return Yposition;
+        }
+
+        public void Euler(ref SphereC buoy, float dt, WavesSettings[] wavesSettings, float elapsedTime)
+        {
+            float flotabilityForce = waterDensity * gravity * GetVolume(buoy, wavesSettings, elapsedTime);
+
+            float force = (flotabilityForce - (mass * gravity)) * buoyancyCoefficient;
+
+            float acceleration = force / mass;
+
+            buoyVelocity += acceleration * dt;
+
+            buoy.position.y += buoyVelocity * dt;
+        }
+
+        public float GetVolume(SphereC buoy, WavesSettings[] wavesSettings, float elapsedTime)
+        {
+            float waveHeight = GetWaveHeight(wavesSettings, buoy, elapsedTime);
+
+            float immerseHeight = waveHeight - buoy.position.y - buoy.radius;
+
+            return ((float)Math.PI * (float)Math.Pow(immerseHeight, 2) / 3) * (3 * buoy.radius - immerseHeight);
+        }
+    }
+
+    public BuoySettings buoySettings;
 
     public SphereC buoy;
 
+    private float elapsedTime;
+
+    public AA3_Waves()
+    {
+        elapsedTime = 0.0f;
+    }
 
     public void Update(float dt)
     {
         elapsedTime += dt;
 
-        for (int i = 0; i < points.Length; i++)
+        for (int i = 0; i < wavesSettings.Length; i++)
         {
-            points[i].position = points[i].originalposition;
+            wavesSettings[i].Update(ref points, elapsedTime);
+        }
 
-            for (int j = 0; j < wavesSettings.Length; j++)
+        buoySettings.Update(ref buoy, dt, wavesSettings, elapsedTime);
+    }
+
+    public void Debug()
+    {
+        if (points != null)
+            foreach (var item in points)
             {
-                float k = 2 * (float)Math.PI / wavesSettings[j].frequency;
-
-                points[i].position.x += points[i].originalposition.x + wavesSettings[j].amplitude * k
-                    * (float)Math.Cos(k * (Vector3C.Dot(points[i].originalposition, wavesSettings[j].direction) + (elapsedTime * wavesSettings[j].speed))
-                    + wavesSettings[j].phase) * wavesSettings[j].direction.x;
-
-                points[i].position.z += points[i].originalposition.z + wavesSettings[j].amplitude * k
-                    * (float)Math.Cos(k * (Vector3C.Dot(points[i].originalposition, wavesSettings[j].direction) + (elapsedTime * wavesSettings[j].speed))
-                    + wavesSettings[j].phase) * wavesSettings[j].direction.z;
-
-                points[i].position.y += wavesSettings[j].amplitude
-                    * (float)Math.Sin(k * (Vector3C.Dot(points[i].originalposition, wavesSettings[j].direction) + (elapsedTime * wavesSettings[j].speed))
-                    + wavesSettings[j].phase);
-
-                wavesSettings[j].phase += dt * wavesSettings[j].speed;
+                item.originalposition.Print(0.05f);
+                item.position.Print(0.05f);
             }
-            
-        }
-
-        BuoyEuler(CalculateBuoyForce(), dt);
-    }
-
-
-public float GetWaveHeight(float x, float z)
-{
-    float buoyHeight = 0;
-
-    for (int j = 0; j < wavesSettings.Length; j++)
-    {
-        float k = 2 * (float)Math.PI / wavesSettings[j].frequency;  
-
-        buoyHeight += wavesSettings[j].amplitude
-                * (float)Math.Sin(k * (Vector3C.Dot(new Vector3C(x, 0, z), wavesSettings[j].direction) + (elapsedTime * wavesSettings[j].speed))
-                + wavesSettings[j].phase);
-    }
-
-    return buoyHeight;
-}
-public float CalculateBuoyForce()
-{
-    float waveHeight = GetWaveHeight(buoy.position.x, buoy.position.z);
-
-    float immerseHeight = waveHeight - buoy.position.y - buoy.radius;
-
-    float volume = ((float)Math.PI * (float)Math.Pow(immerseHeight, 2) / 3) * (3 * buoy.radius - immerseHeight);
-    float force = buoySettings.waterDensity * buoySettings.gravity * volume;
-    return (force - (buoySettings.mass * buoySettings.gravity)) * buoySettings.buoyancyCoefficient;
-}
-public void BuoyEuler(float force, float dt)
-{
-    float acceleration = force / buoySettings.mass;
-    buoySettings.buoyVelocity += acceleration * dt;
-
-    buoy.position.y += buoySettings.buoyVelocity * dt;
-}
-
-
-public void Debug()
-    {
-        if(points != null)
-        foreach (var item in points)
-        {
-            item.originalposition.Print(0.05f);
-            item.position.Print(0.05f);
-        }
 
         buoy.Print(Vector3C.blue);
     }
