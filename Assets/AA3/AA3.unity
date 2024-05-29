@@ -175,7 +175,35 @@ MonoBehaviour:
   ySize: 100
   mesh: {fileID: 0}
   waves:
-    wavesSettings: []
+    buoySettings:
+      buoyancyCoefficient: 0.5
+      buoyVelocity: 0
+      mass: 750
+      waterDensity: 1000
+      gravity: -9.81
+    wavesSettings:
+    - amplitude: 0.5
+      frequency: 10
+      phase: 0
+      direction:
+        x: 1
+        y: 0
+        z: 1
+      speed: 0.0001
+    - amplitude: 1
+      frequency: 30
+      phase: 0
+      direction:
+        x: 1
+        y: 0
+        z: 1
+      speed: 0.0001
+    buoy:
+      position:
+        x: 0
+        y: -1.96
+        z: 0
+      radius: 1
 --- !u!33 &83351505
 MeshFilter:
   m_ObjectHideFlags: 0

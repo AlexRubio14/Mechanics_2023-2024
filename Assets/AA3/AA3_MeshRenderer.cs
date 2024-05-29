@@ -69,7 +69,7 @@ public class AA3_MeshRenderer : MonoBehaviour
         return newmesh;
     }
 
-    private void OnDrawGizmosSelected()
+    private void OnDrawGizmos()
     {
         waves.Debug();
     }
